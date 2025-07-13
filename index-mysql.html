@@ -1,0 +1,1075 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Toko Kelontong - Sistem Penjualan (MySQL)</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .hidden {
+            display: none !important;
+        }
+        .currency {
+            font-variant-numeric: tabular-nums;
+        }
+        .loading {
+            opacity: 0.6;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <!-- Header -->
+    <header class="bg-white shadow-sm border-b">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center py-4">
+                <div class="flex items-center">
+                    <h1 class="text-xl font-bold text-gray-900 cursor-pointer" onclick="showPage('dashboard')">
+                        Toko Kelontong <span class="text-sm text-green-600">(MySQL)</span>
+                    </h1>
+                </div>
+                <nav class="flex space-x-8">
+                    <a href="#" class="text-gray-600 hover:text-gray-900 px-3 py-2 text-sm font-medium" onclick="showPage('dashboard')">Dashboard</a>
+                    <a href="#" class="text-gray-600 hover:text-gray-900 px-3 py-2 text-sm font-medium" onclick="showPage('stock')">Stock Barang</a>
+                    <a href="#" class="text-gray-600 hover:text-gray-900 px-3 py-2 text-sm font-medium" onclick="showPage('transactions')">Transaksi</a>
+                    <a href="#" class="text-gray-600 hover:text-gray-900 px-3 py-2 text-sm font-medium" onclick="showPage('products')">List Barang</a>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <!-- Loading Indicator -->
+    <div id="loading" class="fixed top-0 left-0 w-full h-full bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white p-6 rounded-lg shadow-lg">
+            <div class="flex items-center space-x-3">
+                <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+                <span>Loading...</span>
+            </div>
+        </div>
+    </div>
+
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <!-- Dashboard Page -->
+        <div id="dashboard-page" class="page">
+            <div class="space-y-8">
+                <div class="text-center">
+                    <h1 class="text-3xl font-bold text-gray-900 mb-4">
+                        Selamat Datang di Sistem Penjualan Toko Kelontong
+                    </h1>
+                    <p class="text-lg text-gray-600 mb-2">
+                        Kelola stock barang, transaksi penjualan, dan daftar produk dengan mudah
+                    </p>
+                    <p class="text-sm text-green-600 font-medium">
+                        ✓ Terhubung dengan Database MySQL
+                    </p>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="bg-white p-6 rounded-lg shadow-md border hover:shadow-lg transition-shadow cursor-pointer" onclick="showPage('stock')">
+                        <h3 class="text-xl font-semibold text-gray-900 mb-2">Stock Barang</h3>
+                        <p class="text-gray-600 mb-4">
+                            Pantau dan kelola stok barang yang tersedia di toko
+                        </p>
+                        <div class="text-blue-600 font-medium">
+                            Lihat Stock →
+                        </div>
+                    </div>
+
+                    <div class="bg-white p-6 rounded-lg shadow-md border hover:shadow-lg transition-shadow cursor-pointer" onclick="showPage('transactions')">
+                        <h3 class="text-xl font-semibold text-gray-900 mb-2">Transaksi Penjualan</h3>
+                        <p class="text-gray-600 mb-4">
+                            Catat dan lihat riwayat transaksi penjualan
+                        </p>
+                        <div class="text-green-600 font-medium">
+                            Kelola Transaksi →
+                        </div>
+                    </div>
+
+                    <div class="bg-white p-6 rounded-lg shadow-md border hover:shadow-lg transition-shadow cursor-pointer" onclick="showPage('products')">
+                        <h3 class="text-xl font-semibold text-gray-900 mb-2">List Barang</h3>
+                        <p class="text-gray-600 mb-4">
+                            Daftar lengkap produk dan informasi detail
+                        </p>
+                        <div class="text-purple-600 font-medium">
+                            Lihat Produk →
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-gray-50 p-6 rounded-lg">
+                    <h2 class="text-xl font-semibold text-gray-900 mb-4">Ringkasan Hari Ini</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div class="text-center">
+                            <div class="text-2xl font-bold text-blue-600" id="total-products">-</div>
+                            <div class="text-sm text-gray-600">Total Produk</div>
+                        </div>
+                        <div class="text-center">
+                            <div class="text-2xl font-bold text-green-600" id="total-transactions">-</div>
+                            <div class="text-sm text-gray-600">Transaksi Hari Ini</div>
+                        </div>
+                        <div class="text-center">
+                            <div class="text-2xl font-bold text-purple-600 currency" id="total-sales">-</div>
+                            <div class="text-sm text-gray-600">Penjualan Hari Ini</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Stock Page -->
+        <div id="stock-page" class="page hidden">
+            <div class="space-y-6">
+                <div class="flex justify-between items-center">
+                    <h1 class="text-2xl font-bold text-gray-900">Stock Barang</h1>
+                    <button onclick="loadProducts()" class="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition-colors">
+                        Refresh
+                    </button>
+                </div>
+
+                <div id="low-stock-alert" class="bg-red-50 border border-red-200 rounded-lg p-4 hidden">
+                    <h3 class="text-lg font-semibold text-red-800 mb-2">Peringatan Stock Rendah</h3>
+                    <div id="low-stock-list" class="space-y-1"></div>
+                </div>
+
+                <div class="bg-white p-6 rounded-lg shadow-md border">
+                    <div class="flex flex-col md:flex-row gap-4 mb-6">
+                        <div class="flex-1">
+                            <input
+                                type="text"
+                                id="stock-search"
+                                placeholder="Cari nama barang..."
+                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                oninput="filterStock()"
+                            />
+                        </div>
+                        <div>
+                            <select
+                                id="stock-category"
+                                class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                onchange="filterStock()"
+                            >
+                                <option value="Semua">Semua</option>
+                                <option value="Sembako">Sembako</option>
+                                <option value="Protein">Protein</option>
+                                <option value="Minuman">Minuman</option>
+                                <option value="Makanan">Makanan</option>
+                                <option value="Kebersihan">Kebersihan</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nama Barang</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Kategori</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Stock</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Min. Stock</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Harga</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="stock-table-body" class="bg-white divide-y divide-gray-200">
+                                <tr>
+                                    <td colspan="6" class="px-6 py-4 text-center text-gray-500">Loading...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Transactions Page -->
+        <div id="transactions-page" class="page hidden">
+            <div class="space-y-6">
+                <div class="flex justify-between items-center">
+                    <h1 class="text-2xl font-bold text-gray-900">Transaksi Penjualan</h1>
+                    <div class="flex gap-2">
+                        <button onclick="loadTransactions()" class="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition-colors">
+                            Refresh
+                        </button>
+                        <button onclick="showNewTransactionForm()" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
+                            Transaksi Baru
+                        </button>
+                    </div>
+                </div>
+
+                <!-- New Transaction Form -->
+                <div id="new-transaction-form" class="bg-white p-6 rounded-lg shadow-md border hidden">
+                    <h2 class="text-xl font-semibold text-gray-900 mb-4">Transaksi Baru</h2>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Nama Pelanggan</label>
+                            <input
+                                type="text"
+                                id="customer-name"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                placeholder="Masukkan nama pelanggan"
+                            />
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Metode Pembayaran</label>
+                            <select
+                                id="payment-method"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            >
+                                <option value="Tunai">Tunai</option>
+                                <option value="Transfer">Transfer</option>
+                                <option value="Kartu Debit">Kartu Debit</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="mb-6">
+                        <h3 class="text-lg font-medium text-gray-900 mb-3">Tambah Barang</h3>
+                        <div class="flex gap-4 items-end">
+                            <div class="flex-1">
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Pilih Barang</label>
+                                <select
+                                    id="selected-product"
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                >
+                                    <option value="">Pilih barang...</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Jumlah</label>
+                                <input
+                                    type="number"
+                                    id="quantity"
+                                    min="1"
+                                    value="1"
+                                    class="w-20 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                />
+                            </div>
+                            <button
+                                onclick="addItemToTransaction()"
+                                class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors"
+                            >
+                                Tambah
+                            </button>
+                        </div>
+                    </div>
+
+                    <div id="transaction-items" class="mb-6 hidden">
+                        <h3 class="text-lg font-medium text-gray-900 mb-3">Daftar Barang</h3>
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full divide-y divide-gray-200">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Barang</th>
+                                        <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Harga</th>
+                                        <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Jumlah</th>
+                                        <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Subtotal</th>
+                                        <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Aksi</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="transaction-items-body" class="bg-white divide-y divide-gray-200">
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="mt-4 text-right">
+                            <div class="text-xl font-bold text-gray-900 currency">
+                                Total: <span id="transaction-total">Rp 0</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex gap-4">
+                        <button
+                            onclick="saveTransaction()"
+                            class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+                        >
+                            Simpan Transaksi
+                        </button>
+                        <button
+                            onclick="cancelTransaction()"
+                            class="bg-gray-500 text-white px-6 py-2 rounded-lg hover:bg-gray-600 transition-colors"
+                        >
+                            Batal
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Transaction History -->
+                <div class="bg-white rounded-lg shadow-md border">
+                    <div class="px-6 py-4 border-b border-gray-200">
+                        <h2 class="text-xl font-semibold text-gray-900">Riwayat Transaksi</h2>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tanggal</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Pelanggan</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Pembayaran</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="transactions-table-body" class="bg-white divide-y divide-gray-200">
+                                <tr>
+                                    <td colspan="6" class="px-6 py-4 text-center text-gray-500">Loading...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Products Page -->
+        <div id="products-page" class="page hidden">
+            <div class="space-y-6">
+                <div class="flex justify-between items-center">
+                    <h1 class="text-2xl font-bold text-gray-900">List Barang</h1>
+                    <div class="flex gap-2">
+                        <button onclick="loadProducts()" class="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition-colors">
+                            Refresh
+                        </button>
+                        <button onclick="showAddProductForm()" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
+                            Tambah Produk
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Add/Edit Product Form -->
+                <div id="product-form" class="bg-white p-6 rounded-lg shadow-md border hidden">
+                    <h2 id="product-form-title" class="text-xl font-semibold text-gray-900 mb-4">Tambah Produk Baru</h2>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Nama Produk *</label>
+                            <input
+                                type="text"
+                                id="product-name"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                placeholder="Masukkan nama produk"
+                            />
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Kategori</label>
+                            <select
+                                id="product-category"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            >
+                                <option value="Sembako">Sembako</option>
+                                <option value="Protein">Protein</option>
+                                <option value="Minuman">Minuman</option>
+                                <option value="Makanan">Makanan</option>
+                                <option value="Kebersihan">Kebersihan</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Harga *</label>
+                            <input
+                                type="number"
+                                id="product-price"
+                                min="0"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                placeholder="0"
+                            />
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Stock Awal</label>
+                            <input
+                                type="number"
+                                id="product-stock"
+                                min="0"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                placeholder="0"
+                            />
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Minimum Stock</label>
+                            <input
+                                type="number"
+                                id="product-min-stock"
+                                min="0"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                placeholder="0"
+                            />
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Supplier *</label>
+                            <input
+                                type="text"
+                                id="product-supplier"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                placeholder="Nama supplier"
+                            />
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Barcode</label>
+                            <input
+                                type="text"
+                                id="product-barcode"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                placeholder="Kode barcode"
+                            />
+                        </div>
+
+                        <div class="md:col-span-2">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Deskripsi</label>
+                            <textarea
+                                id="product-description"
+                                rows="3"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                placeholder="Deskripsi produk"
+                            ></textarea>
+                        </div>
+                    </div>
+
+                    <div class="flex gap-4 mt-6">
+                        <button
+                            onclick="saveProduct()"
+                            class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+                        >
+                            <span id="save-product-text">Simpan</span>
+                        </button>
+                        <button
+                            onclick="cancelProductForm()"
+                            class="bg-gray-500 text-white px-6 py-2 rounded-lg hover:bg-gray-600 transition-colors"
+                        >
+                            Batal
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Products List -->
+                <div class="bg-white p-6 rounded-lg shadow-md border">
+                    <div class="flex flex-col md:flex-row gap-4 mb-6">
+                        <div class="flex-1">
+                            <input
+                                type="text"
+                                id="products-search"
+                                placeholder="Cari nama produk atau supplier..."
+                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                oninput="filterProducts()"
+                            />
+                        </div>
+                        <div>
+                            <select
+                                id="products-category"
+                                class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                onchange="filterProducts()"
+                            >
+                                <option value="Semua">Semua</option>
+                                <option value="Sembako">Sembako</option>
+                                <option value="Protein">Protein</option>
+                                <option value="Minuman">Minuman</option>
+                                <option value="Makanan">Makanan</option>
+                                <option value="Kebersihan">Kebersihan</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Produk</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Kategori</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Harga</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Stock</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Supplier</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody id="products-table-body" class="bg-white divide-y divide-gray-200">
+                                <tr>
+                                    <td colspan="6" class="px-6 py-4 text-center text-gray-500">Loading...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // Global variables
+        let products = [];
+        let transactions = [];
+        let currentTransaction = { customerName: '', items: [], paymentMethod: 'Tunai' };
+        let editingProductId = null;
+
+        // API Base URL
+        const API_BASE = '/api';
+
+        // Utility Functions
+        function formatCurrency(amount) {
+            return new Intl.NumberFormat('id-ID', {
+                style: 'currency',
+                currency: 'IDR',
+                minimumFractionDigits: 0
+            }).format(amount);
+        }
+
+        function showLoading() {
+            document.getElementById('loading').classList.remove('hidden');
+        }
+
+        function hideLoading() {
+            document.getElementById('loading').classList.add('hidden');
+        }
+
+        function showError(message) {
+            alert('Error: ' + message);
+        }
+
+        // API Functions
+        async function apiCall(endpoint, options = {}) {
+            try {
+                showLoading();
+                const response = await fetch(API_BASE + endpoint, {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        ...options.headers
+                    },
+                    ...options
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                return data;
+            } catch (error) {
+                console.error('API Error:', error);
+                showError(error.message);
+                throw error;
+            } finally {
+                hideLoading();
+            }
+        }
+
+        // Load data functions
+        async function loadDashboard() {
+            try {
+                const data = await apiCall('/dashboard');
+                document.getElementById('total-products').textContent = data.totalProducts;
+                document.getElementById('total-transactions').textContent = data.totalTransactions;
+                document.getElementById('total-sales').textContent = formatCurrency(data.totalSales);
+            } catch (error) {
+                console.error('Error loading dashboard:', error);
+            }
+        }
+
+        async function loadProducts() {
+            try {
+                products = await apiCall('/products');
+                renderStockTable();
+                renderProductsTable();
+                checkLowStock();
+                populateProductSelect();
+            } catch (error) {
+                console.error('Error loading products:', error);
+            }
+        }
+
+        async function loadTransactions() {
+            try {
+                transactions = await apiCall('/transactions');
+                renderTransactionsTable();
+            } catch (error) {
+                console.error('Error loading transactions:', error);
+            }
+        }
+
+        // Page navigation
+        function showPage(pageId) {
+            // Hide all pages
+            document.querySelectorAll('.page').forEach(page => {
+                page.classList.add('hidden');
+            });
+            
+            // Show selected page
+            document.getElementById(pageId + '-page').classList.remove('hidden');
+            
+            // Load page data
+            if (pageId === 'dashboard') {
+                loadDashboard();
+            } else if (pageId === 'stock') {
+                loadProducts();
+            } else if (pageId === 'transactions') {
+                loadTransactions();
+                loadProducts(); // For product select
+            } else if (pageId === 'products') {
+                loadProducts();
+            }
+        }
+
+        // Stock Functions
+        function renderStockTable() {
+            const tbody = document.getElementById('stock-table-body');
+            tbody.innerHTML = '';
+            
+            if (products.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" class="px-6 py-4 text-center text-gray-500">Tidak ada data produk</td></tr>';
+                return;
+            }
+            
+            products.forEach(product => {
+                const row = document.createElement('tr');
+                row.className = 'hover:bg-gray-50';
+                
+                let statusClass = 'bg-green-100 text-green-800';
+                let statusText = 'Stock Aman';
+                
+                if (product.stock <= product.min_stock) {
+                    statusClass = 'bg-red-100 text-red-800';
+                    statusText = 'Stock Rendah';
+                } else if (product.stock <= product.min_stock * 2) {
+                    statusClass = 'bg-yellow-100 text-yellow-800';
+                    statusText = 'Perlu Restock';
+                }
+                
+                row.innerHTML = `
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${product.name}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${product.category}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${product.stock} unit</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${product.min_stock} unit</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${formatCurrency(product.price)}</td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full ${statusClass}">
+                            ${statusText}
+                        </span>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        function filterStock() {
+            const searchTerm = document.getElementById('stock-search').value.toLowerCase();
+            const selectedCategory = document.getElementById('stock-category').value;
+            
+            const filteredProducts = products.filter(product => {
+                const matchesSearch = product.name.toLowerCase().includes(searchTerm);
+                const matchesCategory = selectedCategory === 'Semua' || product.category === selectedCategory;
+                return matchesSearch && matchesCategory;
+            });
+            
+            const tbody = document.getElementById('stock-table-body');
+            tbody.innerHTML = '';
+            
+            filteredProducts.forEach(product => {
+                const row = document.createElement('tr');
+                row.className = 'hover:bg-gray-50';
+                
+                let statusClass = 'bg-green-100 text-green-800';
+                let statusText = 'Stock Aman';
+                
+                if (product.stock <= product.min_stock) {
+                    statusClass = 'bg-red-100 text-red-800';
+                    statusText = 'Stock Rendah';
+                } else if (product.stock <= product.min_stock * 2) {
+                    statusClass = 'bg-yellow-100 text-yellow-800';
+                    statusText = 'Perlu Restock';
+                }
+                
+                row.innerHTML = `
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${product.name}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${product.category}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${product.stock} unit</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${product.min_stock} unit</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${formatCurrency(product.price)}</td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full ${statusClass}">
+                            ${statusText}
+                        </span>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        function checkLowStock() {
+            const lowStockProducts = products.filter(product => product.stock <= product.min_stock);
+            const alertDiv = document.getElementById('low-stock-alert');
+            const listDiv = document.getElementById('low-stock-list');
+            
+            if (lowStockProducts.length > 0) {
+                alertDiv.classList.remove('hidden');
+                listDiv.innerHTML = '';
+                lowStockProducts.forEach(product => {
+                    const p = document.createElement('p');
+                    p.className = 'text-red-700 text-sm';
+                    p.textContent = `${product.name}: ${product.stock} unit (minimum: ${product.min_stock})`;
+                    listDiv.appendChild(p);
+                });
+            } else {
+                alertDiv.classList.add('hidden');
+            }
+        }
+
+        // Transaction Functions
+        function showNewTransactionForm() {
+            document.getElementById('new-transaction-form').classList.remove('hidden');
+            populateProductSelect();
+        }
+
+        function populateProductSelect() {
+            const select = document.getElementById('selected-product');
+            select.innerHTML = '<option value="">Pilih barang...</option>';
+            
+            products.forEach(product => {
+                const option = document.createElement('option');
+                option.value = product.name;
+                option.textContent = `${product.name} - ${formatCurrency(product.price)} (Stock: ${product.stock})`;
+                select.appendChild(option);
+            });
+        }
+
+        function addItemToTransaction() {
+            const selectedProductName = document.getElementById('selected-product').value;
+            const quantity = parseInt(document.getElementById('quantity').value) || 1;
+            
+            if (!selectedProductName || quantity <= 0) {
+                alert('Pilih produk dan masukkan jumlah yang valid');
+                return;
+            }
+            
+            const product = products.find(p => p.name === selectedProductName);
+            if (!product) return;
+            
+            if (quantity > product.stock) {
+                alert('Jumlah melebihi stock yang tersedia');
+                return;
+            }
+            
+            const existingItemIndex = currentTransaction.items.findIndex(item => item.productName === selectedProductName);
+            
+            if (existingItemIndex >= 0) {
+                currentTransaction.items[existingItemIndex].quantity += quantity;
+                currentTransaction.items[existingItemIndex].subtotal = currentTransaction.items[existingItemIndex].quantity * product.price;
+            } else {
+                currentTransaction.items.push({
+                    productName: selectedProductName,
+                    quantity: quantity,
+                    price: product.price,
+                    subtotal: quantity * product.price
+                });
+            }
+            
+            document.getElementById('selected-product').value = '';
+            document.getElementById('quantity').value = '1';
+            
+            renderTransactionItems();
+        }
+
+        function renderTransactionItems() {
+            const itemsDiv = document.getElementById('transaction-items');
+            const tbody = document.getElementById('transaction-items-body');
+            
+            if (currentTransaction.items.length > 0) {
+                itemsDiv.classList.remove('hidden');
+                tbody.innerHTML = '';
+                
+                currentTransaction.items.forEach((item, index) => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td class="px-4 py-2 text-sm text-gray-900">${item.productName}</td>
+                        <td class="px-4 py-2 text-sm text-gray-900">${formatCurrency(item.price)}</td>
+                        <td class="px-4 py-2 text-sm text-gray-900">${item.quantity}</td>
+                        <td class="px-4 py-2 text-sm text-gray-900">${formatCurrency(item.subtotal)}</td>
+                        <td class="px-4 py-2">
+                            <button onclick="removeItemFromTransaction(${index})" class="text-red-600 hover:text-red-800 text-sm">
+                                Hapus
+                            </button>
+                        </td>
+                    `;
+                    tbody.appendChild(row);
+                });
+                
+                const total = currentTransaction.items.reduce((sum, item) => sum + item.subtotal, 0);
+                document.getElementById('transaction-total').textContent = formatCurrency(total);
+            } else {
+                itemsDiv.classList.add('hidden');
+            }
+        }
+
+        function removeItemFromTransaction(index) {
+            currentTransaction.items.splice(index, 1);
+            renderTransactionItems();
+        }
+
+        async function saveTransaction() {
+            const customerName = document.getElementById('customer-name').value.trim();
+            const paymentMethod = document.getElementById('payment-method').value;
+            
+            if (!customerName || currentTransaction.items.length === 0) {
+                alert('Mohon lengkapi data transaksi');
+                return;
+            }
+            
+            const total = currentTransaction.items.reduce((sum, item) => sum + item.subtotal, 0);
+            
+            const transactionData = {
+                customerName: customerName,
+                items: currentTransaction.items,
+                total: total,
+                paymentMethod: paymentMethod
+            };
+            
+            try {
+                await apiCall('/transactions', {
+                    method: 'POST',
+                    body: JSON.stringify(transactionData)
+                });
+                
+                // Reset form
+                currentTransaction = { customerName: '', items: [], paymentMethod: 'Tunai' };
+                document.getElementById('customer-name').value = '';
+                document.getElementById('payment-method').value = 'Tunai';
+                document.getElementById('new-transaction-form').classList.add('hidden');
+                
+                // Reload data
+                await loadTransactions();
+                await loadProducts();
+                
+                alert('Transaksi berhasil disimpan!');
+            } catch (error) {
+                console.error('Error saving transaction:', error);
+            }
+        }
+
+        function cancelTransaction() {
+            currentTransaction = { customerName: '', items: [], paymentMethod: 'Tunai' };
+            document.getElementById('customer-name').value = '';
+            document.getElementById('payment-method').value = 'Tunai';
+            document.getElementById('new-transaction-form').classList.add('hidden');
+        }
+
+        function renderTransactionsTable() {
+            const tbody = document.getElementById('transactions-table-body');
+            tbody.innerHTML = '';
+            
+            if (transactions.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" class="px-6 py-4 text-center text-gray-500">Tidak ada data transaksi</td></tr>';
+                return;
+            }
+            
+            transactions.forEach(transaction => {
+                const row = document.createElement('tr');
+                row.className = 'hover:bg-gray-50';
+                const date = new Date(transaction.date).toLocaleString('id-ID');
+                row.innerHTML = `
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">#${transaction.id}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${date}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${transaction.customer_name}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${formatCurrency(transaction.total)}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${transaction.payment_method}</td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
+                            ${transaction.status}
+                        </span>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        // Product Functions
+        function showAddProductForm() {
+            document.getElementById('product-form').classList.remove('hidden');
+            document.getElementById('product-form-title').textContent = 'Tambah Produk Baru';
+            document.getElementById('save-product-text').textContent = 'Simpan';
+            editingProductId = null;
+            clearProductForm();
+        }
+
+        function clearProductForm() {
+            document.getElementById('product-name').value = '';
+            document.getElementById('product-category').value = 'Sembako';
+            document.getElementById('product-price').value = '';
+            document.getElementById('product-stock').value = '';
+            document.getElementById('product-min-stock').value = '';
+            document.getElementById('product-supplier').value = '';
+            document.getElementById('product-barcode').value = '';
+            document.getElementById('product-description').value = '';
+        }
+
+        function editProduct(id) {
+            const product = products.find(p => p.id === id);
+            if (!product) return;
+            
+            editingProductId = id;
+            document.getElementById('product-form').classList.remove('hidden');
+            document.getElementById('product-form-title').textContent = 'Edit Produk';
+            document.getElementById('save-product-text').textContent = 'Perbarui';
+            
+            document.getElementById('product-name').value = product.name;
+            document.getElementById('product-category').value = product.category;
+            document.getElementById('product-price').value = product.price;
+            document.getElementById('product-stock').value = product.stock;
+            document.getElementById('product-min-stock').value = product.min_stock;
+            document.getElementById('product-supplier').value = product.supplier;
+            document.getElementById('product-barcode').value = product.barcode || '';
+            document.getElementById('product-description').value = product.description || '';
+        }
+
+        async function saveProduct() {
+            const name = document.getElementById('product-name').value.trim();
+            const category = document.getElementById('product-category').value;
+            const price = parseInt(document.getElementById('product-price').value) || 0;
+            const stock = parseInt(document.getElementById('product-stock').value) || 0;
+            const minStock = parseInt(document.getElementById('product-min-stock').value) || 0;
+            const supplier = document.getElementById('product-supplier').value.trim();
+            const barcode = document.getElementById('product-barcode').value.trim();
+            const description = document.getElementById('product-description').value.trim();
+            
+            if (!name || !supplier || price <= 0) {
+                alert('Mohon lengkapi semua data produk yang wajib diisi');
+                return;
+            }
+            
+            const productData = {
+                name, category, price, stock, minStock, supplier, barcode, description
+            };
+            
+            try {
+                if (editingProductId) {
+                    // Edit existing product
+                    await apiCall(`/products/${editingProductId}`, {
+                        method: 'PUT',
+                        body: JSON.stringify(productData)
+                    });
+                    alert('Produk berhasil diperbarui!');
+                } else {
+                    // Add new product
+                    await apiCall('/products', {
+                        method: 'POST',
+                        body: JSON.stringify(productData)
+                    });
+                    alert('Produk berhasil ditambahkan!');
+                }
+                
+                cancelProductForm();
+                await loadProducts();
+            } catch (error) {
+                console.error('Error saving product:', error);
+            }
+        }
+
+        async function deleteProduct(id) {
+            if (confirm('Apakah Anda yakin ingin menghapus produk ini?')) {
+                try {
+                    await apiCall(`/products/${id}`, {
+                        method: 'DELETE'
+                    });
+                    alert('Produk berhasil dihapus!');
+                    await loadProducts();
+                } catch (error) {
+                    console.error('Error deleting product:', error);
+                }
+            }
+        }
+
+        function cancelProductForm() {
+            document.getElementById('product-form').classList.add('hidden');
+            editingProductId = null;
+            clearProductForm();
+        }
+
+        function renderProductsTable() {
+            const tbody = document.getElementById('products-table-body');
+            tbody.innerHTML = '';
+            
+            if (products.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" class="px-6 py-4 text-center text-gray-500">Tidak ada data produk</td></tr>';
+                return;
+            }
+            
+            products.forEach(product => {
+                const row = document.createElement('tr');
+                row.className = 'hover:bg-gray-50';
+                row.innerHTML = `
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div>
+                            <div class="text-sm font-medium text-gray-900">${product.name}</div>
+                            <div class="text-sm text-gray-500">${product.description || ''}</div>
+                            ${product.barcode ? `<div class="text-xs text-gray-400">Barcode: ${product.barcode}</div>` : ''}
+                        </div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${product.category}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${formatCurrency(product.price)}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        ${product.stock} unit
+                        <div class="text-xs text-gray-500">Min: ${product.min_stock}</div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${product.supplier}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
+                        <button onclick="editProduct(${product.id})" class="text-blue-600 hover:text-blue-900">Edit</button>
+                        <button onclick="deleteProduct(${product.id})" class="text-red-600 hover:text-red-900">Hapus</button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        function filterProducts() {
+            const searchTerm = document.getElementById('products-search').value.toLowerCase();
+            const selectedCategory = document.getElementById('products-category').value;
+            
+            const filteredProducts = products.filter(product => {
+                const matchesSearch = product.name.toLowerCase().includes(searchTerm) ||
+                                   product.supplier.toLowerCase().includes(searchTerm);
+                const matchesCategory = selectedCategory === 'Semua' || product.category === selectedCategory;
+                return matchesSearch && matchesCategory;
+            });
+            
+            const tbody = document.getElementById('products-table-body');
+            tbody.innerHTML = '';
+            
+            filteredProducts.forEach(product => {
+                const row = document.createElement('tr');
+                row.className = 'hover:bg-gray-50';
+                row.innerHTML = `
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div>
+                            <div class="text-sm font-medium text-gray-900">${product.name}</div>
+                            <div class="text-sm text-gray-500">${product.description || ''}</div>
+                            ${product.barcode ? `<div class="text-xs text-gray-400">Barcode: ${product.barcode}</div>` : ''}
+                        </div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${product.category}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${formatCurrency(product.price)}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        ${product.stock} unit
+                        <div class="text-xs text-gray-500">Min: ${product.min_stock}</div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${product.supplier}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
+                        <button onclick="editProduct(${product.id})" class="text-blue-600 hover:text-blue-900">Edit</button>
+                        <button onclick="deleteProduct(${product.id})" class="text-red-600 hover:text-red-900">Hapus</button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        // Initialize the application
+        document.addEventListener('DOMContentLoaded', function() {
+            showPage('dashboard');
+        });
+    </script>
+</body>
+</html>
